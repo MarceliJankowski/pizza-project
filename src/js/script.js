@@ -111,19 +111,19 @@
 
       // O(n^2) Painful...
       for (let paramId in this.data.params) {
-        // determine param value, e.g. paramId = 'toppings', param = { label: 'Toppings', type: 'checkboxes'... }
         const param = this.data.params[paramId];
 
         for (let optionId in param.options) {
-          // determine option value, e.g. optionId = 'olives', option = { label: 'Olives', price: 2, default: true }
           const option = param.options[optionId];
 
-          // check whether optionId of paramId is chosen within form
           const isOptionSet = formData[paramId].includes(optionId);
 
-          // if option is not set and it's default then decrease the price
+          // handle images
+          const image = this.imageWrapper.querySelector(`img.${paramId}-${optionId}`);
+          if (image) isOptionSet ? image.classList.add("active") : image.classList.remove("active");
+
+          // handle prices
           if (!isOptionSet && option.default) price -= option.price;
-          // if option set and it's not default then increase the price
           else if (isOptionSet && !option.default) price += option.price;
         }
       }
@@ -132,6 +132,7 @@
     }
 
     getElements() {
+      this.imageWrapper = this.element.querySelector(select.menuProduct.imageWrapper);
       this.accordionTrigger = this.element.querySelector(select.menuProduct.clickable);
       this.form = this.element.querySelector(select.menuProduct.form);
       this.formInputs = this.form.querySelectorAll(select.all.formInputs);
