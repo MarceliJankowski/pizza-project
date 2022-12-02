@@ -61,6 +61,7 @@
       this.getElements();
       this.initAccordion();
       this.initOrderForm();
+      this.initAmountWidget();
       this.processOrder();
     }
 
@@ -128,16 +129,80 @@
         }
       }
 
+      price *= this.amountWidget.value; // multiply price by amount
+
       this.priceElem.innerHTML = price;
     }
 
     getElements() {
+      this.amountWidgetElement = this.element.querySelector(select.menuProduct.amountWidget);
       this.imageWrapper = this.element.querySelector(select.menuProduct.imageWrapper);
       this.accordionTrigger = this.element.querySelector(select.menuProduct.clickable);
       this.form = this.element.querySelector(select.menuProduct.form);
       this.formInputs = this.form.querySelectorAll(select.all.formInputs);
       this.cartButton = this.element.querySelector(select.menuProduct.cartButton);
       this.priceElem = this.element.querySelector(select.menuProduct.priceElem);
+    }
+
+    initAmountWidget() {
+      this.amountWidget = new AmountWidget(this.amountWidgetElement);
+
+      this.amountWidgetElement.addEventListener("update", () => this.processOrder());
+    }
+  }
+
+  class AmountWidget {
+    constructor(element) {
+      this.getElements(element);
+      this.initActions();
+      this.setValue(this.input.value);
+
+      // set initial value
+      this.value = settings.amountWidget.defaultValue;
+      this.input.value = settings.amountWidget.defaultValue;
+    }
+
+    getElements(element) {
+      this.element = element;
+      this.input = this.element.querySelector(select.widgets.amount.input);
+      this.linkDecrease = this.element.querySelector(select.widgets.amount.linkDecrease);
+      this.linkIncrease = this.element.querySelector(select.widgets.amount.linkIncrease);
+    }
+
+    setValue(value) {
+      const newValue = parseInt(value);
+
+      const isNewValueChanged = newValue !== this.value;
+      const isNewValueNumber = typeof newValue === "number";
+      const isNewValueWithinLimits =
+        newValue >= settings.amountWidget.defaultMin && newValue <= settings.amountWidget.defaultMax;
+
+      if (isNewValueChanged && isNewValueNumber && isNewValueWithinLimits) this.value = newValue;
+
+      this.input.value = this.value;
+
+      this.announce();
+    }
+
+    initActions() {
+      this.input.addEventListener("change", event => {
+        this.setValue(event.currentTarget.value);
+      });
+
+      this.linkDecrease.addEventListener("click", event => {
+        event.preventDefault();
+        this.setValue(this.value - 1);
+      });
+
+      this.linkIncrease.addEventListener("click", event => {
+        event.preventDefault();
+        this.setValue(this.value + 1);
+      });
+    }
+
+    announce() {
+      const event = new Event("update");
+      this.element.dispatchEvent(event);
     }
   }
 
