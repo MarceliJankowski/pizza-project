@@ -292,6 +292,7 @@
       this.dom = {
         wrapper: element,
         toggleTrigger: element.querySelector(select.cart.toggleTrigger),
+        productList: element.querySelector(select.cart.productList),
       };
     }
 
@@ -302,7 +303,10 @@
     }
 
     add(menuProduct) {
-      console.log(menuProduct);
+      const generatedHTML = templates.cartProduct(menuProduct);
+      const generatedDOM = utils.createDOMFromHTML(generatedHTML);
+
+      this.dom.productList.appendChild(generatedDOM);
     }
   }
 
