@@ -129,6 +129,7 @@
       this.cartButton.addEventListener("click", event => {
         event.preventDefault();
         this.processOrder();
+        this.addToCart();
       });
     }
 
@@ -158,7 +159,9 @@
 
       price *= this.amountWidget.value; // multiply price by amount
 
+      this.data.amount = this.amountWidget.value;
       this.priceElem.innerHTML = price;
+      this.priceSingle = price;
     }
 
     getElements() {
@@ -175,6 +178,50 @@
       this.amountWidget = new AmountWidget(this.amountWidgetElement);
 
       this.amountWidgetElement.addEventListener("update", () => this.processOrder());
+    }
+
+    addToCart() {
+      const product = this.prepareCartProduct();
+      app.cart.add(product);
+    }
+
+    prepareCartProduct() {
+      const { id, name, amount, price: priceSingle } = this.data;
+
+      const productSummary = {
+        id,
+        name,
+        amount,
+        priceSingle,
+        get price() {
+          return Number(this.priceSingle) * this.amount;
+        },
+        params: this.prepareCartProductParams(),
+      };
+
+      return productSummary;
+    }
+
+    prepareCartProductParams() {
+      const formData = utils.serializeFormToObject(this.form);
+
+      const params = {};
+
+      for (let paramId in this.data.params) {
+        const { options, label } = this.data.params[paramId];
+
+        for (let optionId in options) {
+          const isOptionSet = formData[paramId].includes(optionId);
+          if (!isOptionSet) continue;
+
+          const option = options[optionId];
+
+          params[paramId] ??= { label, options: {} };
+          params[paramId].options[optionId] = option.label;
+        }
+      }
+
+      return params;
     }
   }
 
@@ -252,6 +299,10 @@
       this.dom.toggleTrigger.addEventListener("click", () => {
         this.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
       });
+    }
+
+    add(menuProduct) {
+      console.log(menuProduct);
     }
   }
 
