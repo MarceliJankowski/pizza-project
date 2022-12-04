@@ -157,11 +157,12 @@
         }
       }
 
+      const priceSingle = price;
       price *= this.amountWidget.value; // multiply price by amount
 
       this.data.amount = this.amountWidget.value;
       this.priceElem.innerHTML = price;
-      this.priceSingle = price;
+      this.data.priceSingle = priceSingle;
     }
 
     getElements() {
@@ -186,7 +187,7 @@
     }
 
     prepareCartProduct() {
-      const { id, name, amount, price: priceSingle } = this.data;
+      const { id, name, amount, priceSingle } = this.data;
 
       const productSummary = {
         id,
@@ -194,7 +195,7 @@
         amount,
         priceSingle,
         get price() {
-          return Number(this.priceSingle) * this.amount;
+          return Number(priceSingle) * this.amount;
         },
         params: this.prepareCartProductParams(),
       };
@@ -226,14 +227,14 @@
   }
 
   class AmountWidget {
-    constructor(element) {
+    constructor(element, value = settings.amountWidget.defaultValue) {
       this.getElements(element);
       this.initActions();
       this.setValue(this.input.value);
 
       // set initial value
-      this.value = settings.amountWidget.defaultValue;
-      this.input.value = settings.amountWidget.defaultValue;
+      this.value = value;
+      this.input.value = value;
     }
 
     getElements(element) {
@@ -275,7 +276,7 @@
     }
 
     announce() {
-      const event = new Event("update");
+      const event = new CustomEvent("update", { bubbles: true });
       this.element.dispatchEvent(event);
     }
   }
@@ -293,6 +294,10 @@
         wrapper: element,
         toggleTrigger: element.querySelector(select.cart.toggleTrigger),
         productList: element.querySelector(select.cart.productList),
+        deliveryFee: element.querySelector(select.cart.deliveryFee),
+        subtotalPrice: element.querySelector(select.cart.subtotalPrice),
+        totalPrice: element.querySelectorAll(select.cart.totalPrice),
+        totalNumber: element.querySelector(select.cart.totalNumber),
       };
     }
 
@@ -300,6 +305,8 @@
       this.dom.toggleTrigger.addEventListener("click", () => {
         this.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
       });
+
+      this.dom.productList.addEventListener("update", () => this.update());
     }
 
     add(menuProduct) {
@@ -307,6 +314,59 @@
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
       this.dom.productList.appendChild(generatedDOM);
+
+      this.products.push(new CartProduct(menuProduct, generatedDOM));
+
+      this.update();
+    }
+
+    update() {
+      const deliveryFee = settings.cart.defaultDeliveryFee;
+
+      let totalPriceWithoutDeliveryFee = 0;
+      let productsInCartQuantity = 0;
+
+      this.products.forEach(({ menuProduct: { amount, price } }) => {
+        productsInCartQuantity += amount;
+        totalPriceWithoutDeliveryFee += price;
+      });
+
+      this.totalPrice = totalPriceWithoutDeliveryFee && totalPriceWithoutDeliveryFee + deliveryFee;
+
+      this.dom.deliveryFee.innerText = this.totalPrice && deliveryFee;
+      this.dom.subtotalPrice.innerText = totalPriceWithoutDeliveryFee;
+      this.dom.totalNumber.innerText = productsInCartQuantity;
+      this.dom.totalPrice.forEach(el => (el.innerText = this.totalPrice));
+    }
+  }
+
+  class CartProduct {
+    constructor(menuProduct, element) {
+      this.menuProduct = menuProduct;
+      this.element = element;
+
+      this.getElements(element);
+      this.initAmountWidget();
+    }
+
+    getElements(element) {
+      this.dom = {
+        wrapper: element,
+        amountWidget: element.querySelector(select.cartProduct.amountWidget),
+        price: element.querySelector(select.cartProduct.price),
+        edit: element.querySelector(select.cartProduct.edit),
+        remove: element.querySelector(select.cartProduct.remove),
+      };
+    }
+
+    initAmountWidget() {
+      this.amountWidget = new AmountWidget(this.dom.amountWidget, this.menuProduct.amount);
+
+      this.dom.amountWidget.addEventListener("update", () => {
+        this.menuProduct.amount = this.amountWidget.value;
+
+        this.dom.price.innerText = this.menuProduct.price;
+      });
     }
   }
 
