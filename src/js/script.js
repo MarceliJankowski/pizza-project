@@ -307,6 +307,8 @@
       });
 
       this.dom.productList.addEventListener("update", () => this.update());
+
+      this.dom.productList.addEventListener("remove", event => this.remove(event.detail.cartProduct));
     }
 
     add(menuProduct) {
@@ -338,6 +340,16 @@
       this.dom.totalNumber.innerText = productsInCartQuantity;
       this.dom.totalPrice.forEach(el => (el.innerText = this.totalPrice));
     }
+
+    remove(product) {
+      product.dom.wrapper.remove(); // remove product from DOM
+
+      // remove product from product container
+      const productIndex = this.products.findIndex(el => el === product);
+      this.products.splice(productIndex, 1);
+
+      this.update();
+    }
   }
 
   class CartProduct {
@@ -347,6 +359,7 @@
 
       this.getElements(element);
       this.initAmountWidget();
+      this.initActions();
     }
 
     getElements(element) {
@@ -366,6 +379,28 @@
         this.menuProduct.amount = this.amountWidget.value;
 
         this.dom.price.innerText = this.menuProduct.price;
+      });
+    }
+
+    remove() {
+      const event = new CustomEvent("remove", {
+        bubbles: true,
+        detail: {
+          cartProduct: this,
+        },
+      });
+
+      this.dom.wrapper.dispatchEvent(event);
+    }
+
+    initActions() {
+      this.dom.edit.addEventListener("click", event => {
+        event.preventDefault();
+      });
+
+      this.dom.remove.addEventListener("click", event => {
+        event.preventDefault();
+        this.remove();
       });
     }
   }
