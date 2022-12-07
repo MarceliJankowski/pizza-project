@@ -289,6 +289,7 @@
   class Cart {
     constructor(element) {
       this.products = new Array();
+      this.deliveryFee = settings.cart.defaultDeliveryFee;
 
       this.getElements(element);
       this.initActions();
@@ -303,6 +304,9 @@
         subtotalPrice: element.querySelector(select.cart.subtotalPrice),
         totalPrice: element.querySelectorAll(select.cart.totalPrice),
         totalNumber: element.querySelector(select.cart.totalNumber),
+        form: element.querySelector(select.cart.form),
+        phone: element.querySelector(select.cart.phone),
+        address: element.querySelector(select.cart.address),
       };
     }
 
@@ -314,6 +318,12 @@
       this.dom.productList.addEventListener("update", () => this.update());
 
       this.dom.productList.addEventListener("remove", (event) => this.remove(event.detail.cartProduct));
+
+      this.dom.form.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        this.sendOrder();
+      });
     }
 
     add(menuProduct) {
@@ -328,8 +338,6 @@
     }
 
     update() {
-      const deliveryFee = settings.cart.defaultDeliveryFee;
-
       let totalPriceWithoutDeliveryFee = 0;
       let productsInCartQuantity = 0;
 
@@ -338,9 +346,11 @@
         totalPriceWithoutDeliveryFee += price;
       });
 
-      this.totalPrice = totalPriceWithoutDeliveryFee && totalPriceWithoutDeliveryFee + deliveryFee;
+      this.totalPrice = totalPriceWithoutDeliveryFee && totalPriceWithoutDeliveryFee + this.deliveryFee;
+      this.totalNumber = productsInCartQuantity;
+      this.subtotalPrice = totalPriceWithoutDeliveryFee;
 
-      this.dom.deliveryFee.innerText = this.totalPrice && deliveryFee;
+      this.dom.deliveryFee.innerText = this.totalPrice && this.deliveryFee;
       this.dom.subtotalPrice.innerText = totalPriceWithoutDeliveryFee;
       this.dom.totalNumber.innerText = productsInCartQuantity;
       this.dom.totalPrice.forEach((el) => (el.innerText = this.totalPrice));
@@ -354,6 +364,42 @@
       this.products.splice(productIndex, 1);
 
       this.update();
+    }
+
+    sendOrder() {
+      const { url: dbUrl, orders: dbOrders } = settings.db;
+
+      const url = `${dbUrl}/${dbOrders}`;
+
+      const productsSuccint = this.products.map(({ id, name, price, amount, priceSingle, params }) => ({
+        id,
+        name,
+        price,
+        amount,
+        priceSingle,
+        params,
+      }));
+
+      const payload = {
+        address: this.dom.address.value,
+        phone: this.dom.phone.value,
+        totalPrice: this.totalPrice,
+        subtotalPrice: this.subtotalPrice,
+        totalNumber: this.totalNumber,
+        deliveryFee: this.deliveryFee,
+        products: productsSuccint,
+      };
+
+      const payloadJSON = JSON.stringify(payload);
+
+      // why handle promise rejection when we can assume that everything went OK?
+      fetch(url, {
+        method: "POST",
+        body: payloadJSON,
+        headers: {
+          "content-type": "application/json",
+        },
+      });
     }
   }
 
